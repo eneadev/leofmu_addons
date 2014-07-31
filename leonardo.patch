@@ -1,0 +1,377 @@
+--- Firmware/ROMFS/px4fmu_common/init.d/rc.logging	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/ROMFS/px4fmu_common/init.d/rc.logging	2014-07-29 06:36:53.000000000 +0200
+@@ -5,7 +5,7 @@
+ 
+ if [ -d /fs/microsd ]
+ then
+-	if ver hwcmp PX4FMU_V1
++	if ver hwcmp LEOFMU_V1
+ 	then
+ 		echo "Start sdlog2 at 50Hz"
+ 		sdlog2 start -r 50 -a -b 4 -t
+
+--- Firmware/ROMFS/px4fmu_common/init.d/rc.sensors	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/ROMFS/px4fmu_common/init.d/rc.sensors	2014-07-29 06:36:53.000000000 +0200
+@@ -3,42 +3,23 @@
+ # Standard startup script for PX4FMU onboard sensor drivers.
+ #
+ 
+-ms5611 start
++# ms5611 start
+ adc start
+ 
+-if mpu6000 -X start
++# Mag might be external
++if lsm9ds0 start
+ then
++	echo "[init] Using LSM9DS0 - ACC / MAG"
+ fi
+ 
+-if mpu6000 start
+-then
+-fi
+ 
+-if l3gd20 -X start
+-then
+-fi
+ 
+-if l3gd20 start
++if lsm9ds0_gyro start
+ then
++	echo "[init] Using LSM9DS0 - GYRO"
+ fi
+ 
+-# MAG selection
+-if param compare SENS_EXT_MAG 2
++if lps331 start
+ then
+-	if hmc5883 -I start
+-	then
+-	fi
+-else
+-	# Use only external as primary
+-	if param compare SENS_EXT_MAG 1
+-	then
+-		if hmc5883 -X start
+-		then
+-		fi
+-	else
+-	# auto-detect the primary, prefer external
+-		if hmc5883 start
+-		then
+-		fi
+-	fi
++	echo "[init] Using LPS331 - BARO"
+ fi
+--- Firmware/ROMFS/px4fmu_common/init.d/rcS	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/ROMFS/px4fmu_common/init.d/rcS	2014-07-29 06:36:53.000000000 +0200
+@@ -22,12 +22,12 @@
+ 	set LOG_FILE /fs/microsd/bootlog.txt
+ 	echo "[init] microSD mounted: /fs/microsd"
+ 	# Start playing the startup tune
+-	tone_alarm start
++	#tone_alarm start
+ else
+ 	set LOG_FILE /dev/null
+ 	echo "[init] No microSD card found"
+ 	# Play SOS
+-	tone_alarm error
++	#tone_alarm error
+ fi
+ 
+ #
+@@ -204,9 +200,9 @@
+ 		else
+ 			echo "[init] Trying to update"
+ 			echo "PX4IO Trying to update" >> $LOG_FILE
+-
+-			tone_alarm MLL32CP8MB
+-
++			
++			#tone_alarm MLL32CP8MB
++			
+ 			if px4io forceupdate 14662 $IO_FILE
+ 			then
+ 				usleep 500000
+@@ -214,25 +210,25 @@
+ 				then
+ 					echo "[init] PX4IO CRC OK, update successful"
+ 					echo "PX4IO CRC OK after updating" >> $LOG_FILE
+-					tone_alarm MLL8CDE
+-
++					#tone_alarm MLL8CDE
++	
+ 					set IO_PRESENT yes
+ 				else
+ 					echo "[init] ERROR: PX4IO update failed"
+ 					echo "PX4IO update failed" >> $LOG_FILE
+-					tone_alarm $TUNE_OUT_ERROR
++					#tone_alarm $TUNE_OUT_ERROR
+ 				fi
+ 			else
+ 				echo "[init] ERROR: PX4IO update failed"
+ 				echo "PX4IO update failed" >> $LOG_FILE
+-				tone_alarm $TUNE_OUT_ERROR
++				#tone_alarm $TUNE_OUT_ERROR
+ 			fi
+ 		fi
+ 
+ 		if [ $IO_PRESENT == no ]
+ 		then
+ 			echo "[init] ERROR: PX4IO not found"
+-			tone_alarm $TUNE_OUT_ERROR
++			#tone_alarm $TUNE_OUT_ERROR
+ 		fi
+ 	fi
+ 
+@@ -316,7 +297,7 @@
+ 				sh /etc/init.d/rc.io
+ 			else
+ 				echo "[init] ERROR: PX4IO start failed"
+-				tone_alarm $TUNE_OUT_ERROR
++				#tone_alarm $TUNE_OUT_ERROR
+ 			fi
+ 		fi
+ 
+@@ -328,7 +309,7 @@
+ 				echo "[init] FMU mode_$FMU_MODE started"
+ 			else
+ 				echo "[init] ERROR: FMU mode_$FMU_MODE start failed"
+-				tone_alarm $TUNE_OUT_ERROR
++				#tone_alarm $TUNE_OUT_ERROR
+ 			fi
+ 
+ 			if ver hwcmp PX4FMU_V1
+@@ -362,7 +343,7 @@
+ 				echo "[init] MKBLCTRL started"
+ 			else
+ 				echo "[init] ERROR: MKBLCTRL start failed"
+-				tone_alarm $TUNE_OUT_ERROR
++				#tone_alarm $TUNE_OUT_ERROR
+ 			fi
+ 
+ 		fi
+@@ -375,7 +356,7 @@
+ 				echo "[init] HIL output started"
+ 			else
+ 				echo "[init] ERROR: HIL output start failed"
+-				tone_alarm $TUNE_OUT_ERROR
++				#tone_alarm $TUNE_OUT_ERROR
+ 			fi
+ 		fi
+ 
+@@ -392,7 +373,7 @@
+ 					sh /etc/init.d/rc.io
+ 				else
+ 					echo "[init] ERROR: PX4IO start failed"
+-					tone_alarm $TUNE_OUT_ERROR
++					#tone_alarm $TUNE_OUT_ERROR
+ 				fi
+ 			fi
+ 		else
+@@ -403,7 +384,7 @@
+ 					echo "[init] FMU mode_$FMU_MODE started"
+ 				else
+ 					echo "[init] ERROR: FMU mode_$FMU_MODE start failed"
+-					tone_alarm $TUNE_OUT_ERROR
++					#tone_alarm $TUNE_OUT_ERROR
+ 				fi
+ 
+ 				if ver hwcmp PX4FMU_V1
+
+--- Firmware/makefiles/upload.mk	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/makefiles/upload.mk	2014-07-29 06:42:02.000000000 +0200
+@@ -24,6 +24,9 @@
+ .PHONY:	all upload-$(METHOD)-$(BOARD)
+ all:	upload-$(METHOD)-$(BOARD)
+ 
++upload-serial-leofmu-v1:	$(BUNDLE) $(UPLOADER)
++	$(Q) $(PYTHON) -u $(UPLOADER) --port $(SERIAL_PORTS) $(BUNDLE)
++	
+ upload-serial-px4fmu-v1:	$(BUNDLE) $(UPLOADER)
+ 	$(Q) $(PYTHON) -u $(UPLOADER) --port $(SERIAL_PORTS) $(BUNDLE)
+ 
+--- Firmware/src/drivers/drv_gpio.h	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/drivers/drv_gpio.h	2014-07-29 06:36:54.000000000 +0200
+
+@@ -66,6 +66,18 @@
+ 
+ #endif
+ 
++#if defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
++# define GPIO_SERVO_1		(1<<0)		/**< servo 1 output */
++# define GPIO_SERVO_2		(1<<1)		/**< servo 2 output */
++# define GPIO_SERVO_3		(1<<2)		/**< servo 3 output */
++# define GPIO_SERVO_4		(1<<3)		/**< servo 4 output */
++
++# define PX4FMU_DEVICE_PATH	"/dev/px4fmu"
++# define PX4IO_DEVICE_PATH	"/dev/px4io"
++ 
++#endif
++
++
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+ /*
+  * PX4FMUv2 GPIO numbers.
+
+--- Firmware/src/drivers/drv_gps.h	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/drivers/drv_gps.h	2014-07-29 06:36:54.000000000 +0200
+@@ -49,7 +49,7 @@
+ #include "drv_orb_dev.h"
+ 
+ #ifndef GPS_DEFAULT_UART_PORT
+-#define GPS_DEFAULT_UART_PORT "/dev/ttyS3"
++#define GPS_DEFAULT_UART_PORT "/dev/ttyS1"
+ #endif
+ 
+ #define GPS_DEVICE_PATH	"/dev/gps"
+
+
+--- Firmware/src/drivers/px4fmu/fmu.cpp	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/drivers/px4fmu/fmu.cpp	2014-07-29 06:36:54.000000000 +0200
+@@ -108,7 +108,7 @@
+ 	int		set_pwm_alt_channels(uint32_t channels);
+ 
+ private:
+-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
++#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
+ 	static const unsigned _max_actuators = 4;
+ #endif
+ #if defined(CONFIG_ARCH_BOARD_PX4FMU_V2)
+@@ -195,6 +192,12 @@
+ 	{GPIO_GPIO6_INPUT, GPIO_GPIO6_OUTPUT, GPIO_CAN2_TX_2},
+ 	{GPIO_GPIO7_INPUT, GPIO_GPIO7_OUTPUT, GPIO_CAN2_RX_2},
+ #endif
++#if defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
++	{GPIO_GPIO0_INPUT,       GPIO_GPIO0_OUTPUT,       0},
++	{GPIO_GPIO1_INPUT,       GPIO_GPIO1_OUTPUT,       0},
++	{GPIO_GPIO2_INPUT,       GPIO_GPIO2_OUTPUT,       0},
++	{GPIO_GPIO3_INPUT,       GPIO_GPIO3_OUTPUT,       0},
++#endif
+ #if defined(CONFIG_ARCH_BOARD_PX4FMU_V2)
+ 	{GPIO_GPIO0_INPUT,       GPIO_GPIO0_OUTPUT,       0},
+ 	{GPIO_GPIO1_INPUT,       GPIO_GPIO1_OUTPUT,       0},
+@@ -1538,6 +1540,10 @@
+ 		/* select 4-pin PWM mode */
+ 		servo_mode = PX4FMU::MODE_4PWM;
+ #endif
++#if defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
++		/* select 4-pin PWM mode */
++servo_mode = PX4FMU::MODE_4PWM;
++#endif
+ #if defined(CONFIG_ARCH_BOARD_PX4FMU_V2)
+ 		servo_mode = PX4FMU::MODE_6PWM;
+ #endif
+@@ -1863,6 +1869,8 @@
+ 	fprintf(stderr, "  mode_gpio, mode_serial, mode_pwm, mode_gpio_serial, mode_pwm_serial, mode_pwm_gpio, test\n");
+ #elif defined(CONFIG_ARCH_BOARD_PX4FMU_V2) || defined(CONFIG_ARCH_BOARD_AEROCORE)
+ 	fprintf(stderr, "  mode_gpio, mode_pwm, test, sensor_reset [milliseconds]\n");
++#elif defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
++	fprintf(stderr, "  mode_gpio, mode_pwm, test, sensor_reset [milliseconds]\n");
+ #endif
+ 	exit(1);
+ }
+--- Firmware/src/drivers/stm32/adc/adc.cpp	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/drivers/stm32/adc/adc.cpp	2014-07-29 06:36:54.000000000 +0200
+@@ -414,6 +414,11 @@
+ 		/* XXX this hardcodes the default channel set for PX4FMUv1 - should be configurable */
+ 		g_adc = new ADC((1 << 10) | (1 << 11) | (1 << 12) | (1 << 13));
+ #endif
++#ifdef CONFIG_ARCH_BOARD_LEOFMU_V1
++                /* XXX this hardcodes the default channel set for LEOFMUv1 - should be configurable */
++                g_adc = new ADC((1 << 10) | (1 << 11));
++#endif
++
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+ 		/* XXX this hardcodes the default channel set for PX4FMUv2 - should be configurable */
+ 		g_adc = new ADC((1 << 2) | (1 << 3) | (1 << 4) | 
+--- Firmware/src/lib/version/version.h	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/lib/version/version.h	2014-07-29 06:36:54.000000000 +0200
+@@ -55,6 +55,10 @@
+ #define	HW_ARCH "PX4FMU_V1"
+ #endif
+ 
++#ifdef CONFIG_ARCH_BOARD_LEOFMU_V1
++#define	HW_ARCH "LEOFMU_V1"
++#endif
++
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+ #define	HW_ARCH "PX4FMU_V2"
+ #endif
+--- Firmware/src/modules/gpio_led/gpio_led.c	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/modules/gpio_led/gpio_led.c	2014-07-28 08:06:11.000000000 +0200
+@@ -110,10 +110,13 @@
+ 			/* pin name to display */
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
+ 			char *pin_name = "PX4FMU GPIO_EXT1";
+ #endif
++#if defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
++			char *pin_name = "LEOFMU GPIO_NONE";
++#endif
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+ 			char pin_name[] = "AUX OUT 1";
+ #endif
+ 
+ 			if (argc > 2) {
+ 				if (!strcmp(argv[2], "-p")) {
+--- Firmware/src/modules/mavlink/mavlink_main.cpp	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/modules/mavlink/mavlink_main.cpp	2014-07-29 06:36:54.000000000 +0200
+@@ -81,19 +81,19 @@
+ #include "mavlink_commands.h"
+ 
+ #ifndef MAVLINK_CRC_EXTRA
+ #error MAVLINK_CRC_EXTRA has to be defined on PX4 systems
+ #endif
+ 
+ /* oddly, ERROR is not defined for c++ */
+ #ifdef ERROR
+ # undef ERROR
+ #endif
+ static const int ERROR = -1;
+ 
+-#define DEFAULT_DEVICE_NAME	"/dev/ttyS1"
++#define DEFAULT_DEVICE_NAME	"/dev/ttyS2"
+ #define MAX_DATA_RATE	10000	// max data rate in bytes/s
+ #define MAIN_LOOP_DELAY 10000	// 100 Hz @ 1000 bytes/s data rate
+ 
+ static Mavlink *_mavlink_instances = nullptr;
+ 
+ /* TODO: if this is a class member it crashes */
+--- Firmware/src/modules/sensors/sensors.cpp	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/modules/sensors/sensors.cpp	2014-07-29 06:36:55.000000000 +0200
+@@ -119,6 +119,12 @@
+ #define ADC_AIRSPEED_VOLTAGE_CHANNEL	11
+ #endif
+ 
++#ifdef CONFIG_ARCH_BOARD_LEOFMU_V1
++#define ADC_BATTERY_VOLTAGE_CHANNEL	 10
++#define ADC_BATTERY_CURRENT_CHANNEL	-1
++#define ADC_AIRSPEED_VOLTAGE_CHANNEL	-1
++#endif
++
+ #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+ #define ADC_BATTERY_VOLTAGE_CHANNEL	2
+ #define ADC_BATTERY_CURRENT_CHANNEL	3
+@@ -866,6 +866,10 @@
+ 
+ 		/* set the driver to poll at 1000Hz */
+ 		ioctl(fd, SENSORIOCSPOLLRATE, 1000);
++#elif CONFIG_ARCH_BOARD_LEOFMU_V1
++
++		/* set the accel internal sampling rate up to at leat 800Hz */
++		ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
+ 
+ #elif CONFIG_ARCH_BOARD_PX4FMU_V2 || CONFIG_ARCH_BOARD_AEROCORE
+ 
+--- Firmware/src/systemcmds/mtd/mtd.c	2014-07-28 23:22:32.000000000 +0200
++++ Firmware/src/systemcmds/mtd/mtd.c	2014-07-29 06:36:55.000000000 +0200
+
+@@ -254,7 +254,7 @@
+ 		errx(1, "mtd already mounted");
+ 
+ 	if (!attached) {
+-		#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
++		#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)|| defined(CONFIG_ARCH_BOARD_LEOFMU_V1)
+ 		at24xxx_attach();
+ 		#else
+ 		ramtron_attach();
