@@ -1551,8 +1551,8 @@ LSM9DS0::measure()
         accel_report.error_count = 0; // not reported
 
 	accel_report.x_raw =  raw_accel_report.x;
-	accel_report.y_raw =  raw_accel_report.y;
-	accel_report.z_raw =  raw_accel_report.z;
+	accel_report.y_raw =  - raw_accel_report.y;
+	accel_report.z_raw =  - raw_accel_report.z;
 
 	float x_in_new = ((accel_report.x_raw * _accel_range_scale) - _accel_scale.x_offset) * _accel_scale.x_scale;
 	float y_in_new = ((accel_report.y_raw * _accel_range_scale) - _accel_scale.y_offset) * _accel_scale.y_scale;
@@ -1630,7 +1630,7 @@ LSM9DS0::mag_measure()
 	mag_report.timestamp = hrt_absolute_time();
 
 	mag_report.x_raw = raw_mag_report.x;
-	mag_report.y_raw = raw_mag_report.y;
+	mag_report.y_raw = - raw_mag_report.y;
 	mag_report.z_raw = raw_mag_report.z;
 	mag_report.x = ((mag_report.x_raw * _mag_range_scale) - _mag_scale.x_offset) * _mag_scale.x_scale;
 	mag_report.y = ((mag_report.y_raw * _mag_range_scale) - _mag_scale.y_offset) * _mag_scale.y_scale;
