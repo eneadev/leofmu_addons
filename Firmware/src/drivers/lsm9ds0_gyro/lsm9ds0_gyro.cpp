@@ -75,6 +75,7 @@
 static const int ERROR = -1;
 
 /* Orientation on board */
+#define SENSOR_BOARD_ROTATION_LEO
 #define SENSOR_BOARD_ROTATION_000_DEG	0
 #define SENSOR_BOARD_ROTATION_090_DEG	1
 #define SENSOR_BOARD_ROTATION_180_DEG	2
@@ -873,6 +874,7 @@ LSM9DS0_GYRO::measure()
 	report.timestamp = hrt_absolute_time();
         report.error_count = 0; // not recorded
 	
+	#ifndef SENSOR_BOARD_ROTATION_LEO
 	switch (_orientation) {
 
 		case SENSOR_BOARD_ROTATION_000_DEG:
@@ -899,8 +901,14 @@ LSM9DS0_GYRO::measure()
 			report.y_raw = ((raw_report.x == -32768) ? 32767 : -raw_report.x);
 			break;
 	}
-
 	report.z_raw = raw_report.z;
+	#else
+	report.x_raw = raw_report.x;
+	report.y_raw = ((raw_report.y == -32768) ? 32767 : -raw_report.y);
+	report.z_raw = ((raw_report.z == -32768) ? 32767 : -raw_report.z);
+	#endif
+
+	
 
 	report.x = ((report.x_raw * _gyro_range_scale) - _gyro_scale.x_offset) * _gyro_scale.x_scale;
 	report.y = ((report.y_raw * _gyro_range_scale) - _gyro_scale.y_offset) * _gyro_scale.y_scale;
