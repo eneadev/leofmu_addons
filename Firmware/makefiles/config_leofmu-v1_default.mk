@@ -27,6 +27,7 @@ MODULES 	+= drivers/lps331
 # MODULES		+= drivers/mpu6000
 # MODULES		+= drivers/hmc5883
 # MODULES		+= drivers/ms5611
+MODULES		+= drivers/ll40ls
 # MODULES		+= drivers/mb12xx
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
